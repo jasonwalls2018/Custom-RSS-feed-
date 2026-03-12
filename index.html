@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="The Feed">
+<meta name="theme-color" content="#1a1a1a">
+<title>The Feed — RSS Reader</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Source+Serif+4:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Source Serif 4',Georgia,serif;background:linear-gradient(165deg,#f8f6f3 0%,#ece8e1 50%,#e8e4dd 100%);min-height:100vh;min-height:100dvh;color:#111827;overflow-x:hidden}
+.header{background:#1a1a1a;padding:14px 20px;position:sticky;top:0;z-index:50;display:flex;justify-content:space-between;align-items:center}
+.header h1{font:800 20px/1 'Playfair Display',serif;color:#fff;letter-spacing:-.5px}
+.header .sub{font:500 9px/1 'JetBrains Mono',monospace;color:#666;text-transform:uppercase;letter-spacing:2px;margin-top:3px}
+.hdr-actions{display:flex;gap:8px;align-items:center}
+.btn-h{background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font:600 11px/1 'JetBrains Mono',monospace;cursor:pointer;position:relative;transition:background .2s}
+.btn-h:hover{background:rgba(255,255,255,.2)}.btn-h.active{background:#6366f1}
+.badge{position:absolute;top:-6px;right:-6px;background:#ef4444;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+.tabs{background:#fff;border-bottom:1px solid rgba(0,0,0,.08);display:flex;position:sticky;top:52px;z-index:40;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab{background:none;border:none;border-bottom:3px solid transparent;padding:13px 16px 11px;font:600 11px/1 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;cursor:pointer;white-space:nowrap;display:flex;gap:6px;align-items:center;transition:all .2s;flex-shrink:0}
+.tab.active{font-weight:700}
+.tab-badge{color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700}
+.main{max-width:500px;margin:0 auto;padding:20px 16px 100px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.toolbar-info{font:500 11px/1 'JetBrains Mono',monospace;color:#9ca3af}
+.toolbar-actions{display:flex;gap:6px}
+.btn-t{background:rgba(0,0,0,.04);color:#6b7280;border:none;border-radius:6px;padding:6px 12px;font:600 11px/1 'JetBrains Mono',monospace;cursor:pointer;transition:all .2s}
+.btn-t:hover{background:rgba(0,0,0,.08)}.btn-t.active{background:#374151;color:#fff}
+.card-stack{position:relative;display:flex;justify-content:center;min-height:300px;padding-top:8px;touch-action:pan-y}
+.card-bg{position:absolute;width:100%;max-width:440px;pointer-events:none}
+.card-bg-inner{background:#fff;border-radius:16px;padding:28px 24px;min-height:200px;box-shadow:0 4px 12px rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.04)}
+.skel{height:14px;background:#f3f4f6;border-radius:4px;margin-bottom:10px}
+.swipe-card{position:absolute;width:100%;max-width:440px;z-index:10;cursor:grab;user-select:none;-webkit-user-select:none;will-change:transform}
+.swipe-card.dragging{cursor:grabbing;transition:none!important}
+.swipe-card:not(.dragging){transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s ease}
+.swipe-card.exit-right{transform:translateX(150%) rotate(20deg)!important;opacity:0!important}
+.swipe-card.exit-left{transform:translateX(-150%) rotate(-20deg)!important;opacity:0!important}
+.card-inner{background:#fff;border-radius:16px;padding:22px 20px;box-shadow:0 12px 40px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.06);min-height:200px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+.card-meta{display:flex;justify-content:space-between;align-items:center}
+.card-source{font:600 10px/1 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1.5px;color:#6b7280}
+.card-date{font:400 10px/1 'JetBrains Mono',monospace;color:#9ca3af}
+.card-title{font:700 17px/1.35 'Playfair Display',Georgia,serif;color:#111827}
+.card-desc{font:400 13px/1.6 'Source Serif 4',Georgia,serif;color:#4b5563}
+.card-link a{font:600 11px/1 'JetBrains Mono',monospace;color:#6366f1;text-decoration:none}
+.card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:4px}
+.swipe-label{position:absolute;top:16px;padding:5px 14px;border-radius:8px;font:700 13px/1 'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:#fff;pointer-events:none;transition:opacity .1s}
+.swipe-label.keep{right:16px;background:#22c55e}.swipe-label.skip{left:16px;background:#ef4444}
+.card-actions{display:flex;justify-content:center;gap:24px;margin-top:24px;position:relative;z-index:20}
+.btn-a{width:52px;height:52px;border-radius:50%;background:#fff;border:2px solid;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.btn-a.skip{border-color:#fca5a5}.btn-a.skip:hover{background:#fef2f2;transform:scale(1.1)}
+.btn-a.keep{border-color:#86efac}.btn-a.keep:hover{background:#f0fdf4;transform:scale(1.1)}
+.swipe-hint{text-align:center;margin-top:14px;font:400 10px/1 'JetBrains Mono',monospace;color:#c0c0c0}
+.empty{text-align:center;padding:50px 20px;color:#9ca3af}
+.empty .icon{font-size:44px;margin-bottom:14px}
+.empty h3{font:600 16px/1 'Playfair Display',serif;color:#6b7280}
+.empty p{font-size:13px;margin-top:8px}
+.reading-list{display:flex;flex-direction:column;gap:10px}
+.reading-item{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.05);display:flex;gap:12px;align-items:flex-start}
+.ri-content{flex:1;min-width:0}
+.ri-meta{display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
+.ri-meta span{font:600 9px/1 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1.2px;color:#6b7280}
+.ri-meta .dot{color:#d0d0d0}
+.reading-item a{font:600 14px/1.35 'Playfair Display',Georgia,serif;color:#111827;text-decoration:none}
+.reading-item a:hover{color:#6366f1}
+.ri-actions{display:flex;gap:4px;flex-shrink:0;align-items:center}
+.btn-icon{background:none;border:none;cursor:pointer;padding:4px 6px;line-height:1;font-size:16px;color:#d1d5db;transition:color .2s;border-radius:4px}
+.btn-icon:hover{color:#6366f1;background:rgba(99,102,241,.06)}
+.btn-icon.remove:hover{color:#ef4444;background:rgba(239,68,68,.06)}
+.btn-icon.speaking{color:#6366f1;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.feed-editor{background:#fff;border-radius:12px;padding:18px;margin-bottom:20px;border:1px solid rgba(0,0,0,.08);max-height:400px;overflow-y:auto}
+.feed-editor h3{font:700 13px/1 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px}
+.feed-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f3f4f6}
+.feed-row-name{font-size:12px;font-weight:600;color:#111}
+.feed-status{margin-left:8px;font:500 9px/1 'JetBrains Mono',monospace}
+.feed-status.ok{color:#22c55e}.feed-status.err{color:#ef4444}
+.feed-row-url{font:400 8px/1 'JetBrains Mono',monospace;color:#9ca3af;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px}
+.add-form{margin-top:14px;display:flex;gap:6px;flex-wrap:wrap;position:sticky;bottom:0;background:#fff;padding-top:8px}
+.add-form input{flex:1 1 120px;padding:8px 10px;border-radius:6px;border:1px solid #d1d5db;font:400 11px/1 'JetBrains Mono',monospace;outline:none}
+.add-form input:focus{border-color:#6366f1}
+.btn-add{background:#374151;color:#fff;border:none;border-radius:6px;padding:8px 14px;font:600 11px/1 'JetBrains Mono',monospace;cursor:pointer}
+.loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:50px 0}
+.spinner{width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading span{font:500 11px/1 'JetBrains Mono',monospace;color:#9ca3af}
+.load-detail{font-size:10px;color:#c0c0c0;margin-top:-8px}
+.error-box{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:16px;font-size:12px;color:#991b1b}
+.reading-title{font:700 17px/1 'Playfair Display',serif;margin-bottom:18px;display:flex;gap:8px;align-items:center}
+.cache-note{font:400 9px/1 'JetBrains Mono',monospace;color:#b0b0b0;text-align:center;margin-bottom:12px}
+.voice-bar{position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;color:#fff;padding:12px 20px;z-index:100;display:flex;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.2);transform:translateY(100%);transition:transform .3s ease}
+.voice-bar.show{transform:translateY(0)}
+.voice-bar .vb-title{flex:1;font:500 12px/1.3 'Source Serif 4',serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.voice-bar button{background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:16px;padding:6px 10px;border-radius:6px}
+.voice-bar button:hover{background:rgba(255,255,255,.25)}
+@media(max-width:480px){.header{padding:12px 16px}.tab{padding:11px 12px 9px;font-size:10px}.card-inner{padding:18px 16px}.card-title{font-size:15px}.main{padding:16px 12px 100px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const DEFAULT_FEEDS={theology:{label:"Theology",icon:"✝",color:"#8B4513",accent:"#D4A574",feeds:[{name:"The Gospel Coalition",url:"https://www.thegospelcoalition.org/articles/feed/",site:"thegospelcoalition.org"},{name:"Andy Naselli",url:"https://feeds.feedburner.com/naselli",site:"andynaselli.com"},{name:"Kevin DeYoung",url:"https://clearlyreformed.org/feed/",site:"clearlyreformed.org"},{name:"Doug Wilson",url:"https://dougwils.com/feed",site:"dougwils.com"},{name:"Toby Sumpter",url:"https://tobyjsumpter.com/feed",site:"tobyjsumpter.com"},{name:"James White (AOMIN)",url:"https://www.aomin.org/aoblog/feed",site:"aomin.org"},{name:"Christ Over All",url:"https://christoverall.com/feed/",site:"christoverall.com"},{name:"Michael Kruger",url:"https://michaeljkruger.com/feed",site:"michaeljkruger.com"},{name:"It's Good to Be a Man",url:"https://feeds.buzzsprout.com/673875.rss",site:"itsgoodtobeaman.com"},{name:"Christianity Today",url:"https://www.christianitytoday.com/ct/feeds/",site:"christianitytoday.com"},{name:"9Marks",url:"https://www.9marks.org/feed/",site:"9marks.org"},{name:"Themelios (TGC)",url:"https://www.thegospelcoalition.org/themelios/feed/",site:"thegospelcoalition.org"},{name:"Ligonier / Tabletalk",url:"https://www.ligonier.org/feed",site:"ligonier.org"},{name:"Reformed Faith & Practice",url:"https://journal.rts.edu/feed/",site:"journal.rts.edu"},{name:"First Things",url:"https://www.firstthings.com/rss",site:"firstthings.com"},{name:"Reformation21",url:"https://www.reformation21.org/feed/",site:"reformation21.org"},{name:"Credo Magazine",url:"https://credomag.com/feed/",site:"credomag.com"},{name:"The Aquila Report",url:"https://www.theaquilareport.com/feed/",site:"theaquilareport.com"},{name:"Monergism",url:"https://www.monergism.com/reformation-theology/feed",site:"monergism.com"},{name:"ACBC",url:"https://biblicalcounseling.com/feed/",site:"biblicalcounseling.com"},{name:"Albert Mohler",url:"https://albertmohler.com/feed",site:"albertmohler.com"},{name:"Baptist Press",url:"https://www.baptistpress.com/feed/",site:"baptistpress.com"},{name:"Founders Ministries",url:"https://founders.org/feed/",site:"founders.org"},{name:"Indianapolis Theo. Sem.",url:"https://www.indysem.org/blog?format=rss",site:"indysem.org"}]},politics:{label:"Politics",icon:"🏛",color:"#1a1a2e",accent:"#c5283d",feeds:[{name:"Tucker Carlson Show",url:"https://feeds.megaphone.fm/RSV1597324942",site:"tuckercarlson.com"},{name:"Matt Walsh Show",url:"https://feeds.megaphone.fm/WWO3519750043",site:"dailywire.com"},{name:"Daily Wire",url:"https://www.dailywire.com/feeds/rss.xml",site:"dailywire.com"},{name:"Fox News Politics",url:"https://moxie.foxnews.com/google-publisher/politics.xml",site:"foxnews.com"},{name:"Fox News Opinion",url:"https://moxie.foxnews.com/google-publisher/opinion.xml",site:"foxnews.com"},{name:"National Review",url:"https://www.nationalreview.com/feed/",site:"nationalreview.com"},{name:"The American Conservative",url:"https://www.theamericanconservative.com/feed/",site:"theamericanconservative.com"},{name:"The Federalist",url:"https://thefederalist.com/feed/",site:"thefederalist.com"},{name:"American Reformer",url:"https://americanreformer.org/feed/",site:"americanreformer.org"},{name:"Am. Reformer Podcast",url:"https://feed.podbean.com/americanreformerpodcast/feed.xml",site:"podbean.com"},{name:"CNN Politics",url:"http://rss.cnn.com/rss/cnn_allpolitics.rss",site:"cnn.com"},{name:"NYT Politics",url:"https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",site:"nytimes.com"},{name:"IndyPolitics",url:"https://indypolitics.org/feed/",site:"indypolitics.org"},{name:"IN Public Radio Politics",url:"https://indianapublicradio.org/news/category/politics/feed/",site:"indianapublicradio.org"},{name:"IN Public Broadcasting",url:"https://ipbs.org/feed/",site:"ipbs.org"}]},safety:{label:"Safety & IH",icon:"⚠",color:"#0d3b0d",accent:"#f59e0b",feeds:[{name:"OSHA News",url:"https://www.osha.gov/news/newsreleases.xml",site:"osha.gov"},{name:"OSHA Federal Register",url:"https://www.osha.gov/laws-regs/federalregister.xml",site:"osha.gov"},{name:"OSHA Directives",url:"https://www.osha.gov/enforcement/directives.xml",site:"osha.gov"},{name:"OSHA Interpretations",url:"https://www.osha.gov/laws-regs/standardinterpretations.xml",site:"osha.gov"},{name:"Safety+Health Mag",url:"https://www.safetyandhealthmagazine.com/feed",site:"safetyandhealthmagazine.com"},{name:"EHS Today",url:"https://www.ehstoday.com/rss",site:"ehstoday.com"},{name:"ISHN",url:"https://www.ishn.com/rss",site:"ishn.com"},{name:"EU-OSHA",url:"https://osha.europa.eu/en/rss/news.xml",site:"osha.europa.eu"}]}};
+
+const PROXIES=[u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,u=>u];
+async function fetchP(url){for(let i=0;i<PROXIES.length;i++){try{const c=new AbortController,t=setTimeout(()=>c.abort(),8000),r=await fetch(PROXIES[i](url),{signal:c.signal});clearTimeout(t);if(!r.ok)throw new Error(`HTTP ${r.status}`);const x=await r.text();if(x.length<50||!x.includes('<'))throw new Error('Bad');return x}catch(e){if(i===PROXIES.length-1)throw e}}}
+
+function parseRSS(xml,fn,fs){const d=new DOMParser().parseFromString(xml,'text/xml'),items=[];const add=(t,l,dc,dt)=>{if(!t)return;items.push({title:t,link:l,description:dc.replace(/<[^>]*>/g,'').substring(0,300),date:dt?new Date(dt):new Date(),source:fn,site:fs,id:`${fn}-${t}`.replace(/\s+/g,'-').substring(0,120)})};d.querySelectorAll('item').forEach(i=>add(i.querySelector('title')?.textContent?.trim(),i.querySelector('link')?.textContent?.trim()||'',i.querySelector('description')?.textContent?.trim()||'',i.querySelector('pubDate')?.textContent?.trim()));if(!items.length)d.querySelectorAll('entry').forEach(e=>add(e.querySelector('title')?.textContent?.trim(),(e.querySelector('link[rel="alternate"]')||e.querySelector('link'))?.getAttribute('href')||'',(e.querySelector('summary')||e.querySelector('content'))?.textContent?.trim()||'',(e.querySelector('published')||e.querySelector('updated'))?.textContent?.trim()));return items}
+
+function fmtDate(d){if(!d||isNaN(d.getTime()))return'';const diff=Date.now()-d.getTime(),m=Math.floor(diff/6e4),h=Math.floor(diff/36e5),dy=Math.floor(diff/864e5);if(m<60)return`${m}m ago`;if(h<24)return`${h}h ago`;if(dy<7)return`${dy}d ago`;return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+
+// Voice
+let V={speaking:false,u:null,title:'',id:''};
+function speak(item){if(!('speechSynthesis' in window)){alert('Voice not supported');return}stopV();const t=`${item.title}. ${item.description||''}`,u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1;const voices=speechSynthesis.getVoices(),g=voices.find(v=>v.lang.startsWith('en-US'))||voices.find(v=>v.lang.startsWith('en'));if(g)u.voice=g;u.onend=()=>{V.speaking=false;V.id='';render()};u.onerror=u.onend;speechSynthesis.speak(u);V={speaking:true,u,title:item.title,id:item.id};render()}
+function stopV(){speechSynthesis.cancel();V={speaking:false,u:null,title:'',id:''}}
+function togV(item){if(V.speaking&&V.id===item.id){stopV();render()}else speak(item)}
+if('speechSynthesis' in window)speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();
+
+// State & Cache
+const CK='thefeed_v3',CTL=2*36e5;
+let S={cat:'theology',view:'triage',editing:false,loading:false,loadDetail:'',error:'',feeds:JSON.parse(JSON.stringify(DEFAULT_FEEDS)),articles:{theology:[],politics:[],safety:[]},kept:{theology:[],politics:[],safety:[]},discarded:[],feedStatus:{},newName:'',newUrl:'',_cachedAt:{},dragging:false,dragStartX:0,dragCurX:0};
+
+function save(){try{localStorage.setItem(CK,JSON.stringify({kept:S.kept,discarded:S.discarded,feeds:S.feeds,articles:S.articles,feedStatus:S.feedStatus,_cachedAt:S._cachedAt}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(CK));if(!d)return;if(d.kept)S.kept=d.kept;if(d.discarded)S.discarded=d.discarded;if(d.feeds)S.feeds=d.feeds;if(d.articles)for(const c of Object.keys(d.articles))S.articles[c]=(d.articles[c]||[]).map(a=>({...a,date:new Date(a.date)}));if(d.feedStatus)S.feedStatus=d.feedStatus;if(d._cachedAt)S._cachedAt=d._cachedAt}catch(e){}}
+function fresh(c){return S._cachedAt[c]&&(Date.now()-S._cachedAt[c])<CTL&&S.articles[c].length>0}
+
+async function fetchCat(k,force){if(!force&&fresh(k))return;S.loading=true;S.error='';S.loadDetail='0/'+S.feeds[k].feeds.length+' feeds';render();const cat=S.feeds[k],st={};let done=0;const total=cat.feeds.length;
+
+// Fetch ALL feeds in parallel
+const promises=cat.feeds.map(async f=>{try{const items=parseRSS(await fetchP(f.url),f.name,f.site);st[f.name]={ok:true,count:items.length};done++;S.loadDetail=`${done}/${total} feeds`;
+// Progressive: merge results as they arrive
+const all=[...S.articles[k],...items];all.sort((a,b)=>b.date-a.date);const seen=new Set;S.articles[k]=all.filter(a=>{const k2=a.title.toLowerCase().substring(0,60);if(seen.has(k2))return false;seen.add(k2);return true});S.feedStatus[k]={...S.feedStatus[k],...st};render();return items}catch(e){st[f.name]={ok:false,error:e.message||'Failed'};done++;S.loadDetail=`${done}/${total} feeds`;S.feedStatus[k]={...S.feedStatus[k],...st};render();return[]}});
+
+// Clear existing articles before parallel fetch begins
+S.articles[k]=[];
+await Promise.allSettled(promises);
+
+// Final sort & dedupe
+const all2=[...S.articles[k]];all2.sort((a,b)=>b.date-a.date);const seen2=new Set;S.articles[k]=all2.filter(a=>{const k2=a.title.toLowerCase().substring(0,60);if(seen2.has(k2))return false;seen2.add(k2);return true});
+S.feedStatus[k]=st;S._cachedAt[k]=Date.now();S.loading=false;S.loadDetail='';const ok=Object.values(st).filter(s=>s.ok).length,fail=Object.values(st).filter(s=>!s.ok).length;if(!S.articles[k].length)S.error=`No articles loaded. ${fail} feed(s) failed.`;else if(fail)S.error=`${S.articles[k].length} articles from ${ok} feeds. ${fail} failed — check ⚙ Feeds.`;save();render()}
+
+function switchCat(k){S.cat=k;S.editing=false;render();fetchCat(k)}
+function switchView(){S.view=S.view==='triage'?'reading':'triage';render()}
+function toggleEdit(){S.editing=!S.editing;render()}
+function refreshCat(){fetchCat(S.cat,true)}
+function getCur(){const disc=new Set(S.discarded);return S.articles[S.cat].filter(a=>!disc.has(a.id)&&!S.kept[S.cat].find(k=>k.id===a.id))}
+function keepA(a){S.kept[S.cat].unshift(a);save();render()}
+function discA(a){S.discarded.push(a.id);save();render()}
+function rmKept(id){S.kept[S.cat]=S.kept[S.cat].filter(k=>k.id!==id);save();render()}
+function addFeed(){const n=S.newName.trim(),u=S.newUrl.trim();if(!n||!u)return;let s;try{s=new URL(u).hostname}catch{s=u}S.feeds[S.cat].feeds.push({name:n,url:u,site:s});S.newName='';S.newUrl='';save();fetchCat(S.cat,true)}
+function rmFeed(n){S.feeds[S.cat].feeds=S.feeds[S.cat].feeds.filter(f=>f.name!==n);save();render()}
+
+// Swipe
+function gx(e){return e.touches?e.touches[0].clientX:e.clientX}
+function onSS(e){S.dragging=true;S.dragStartX=gx(e);S.dragCurX=S.dragStartX;const c=document.getElementById('ac');if(c)c.classList.add('dragging')}
+function onSM(e){if(!S.dragging)return;S.dragCurX=gx(e);const c=document.getElementById('ac');if(!c)return;const o=S.dragCurX-S.dragStartX;c.style.transform=`translateX(${o}px) rotate(${o*.06}deg)`;c.style.opacity=Math.max(.4,1-Math.abs(o)/400);const kl=c.querySelector('.swipe-label.keep'),sl=c.querySelector('.swipe-label.skip');if(kl)kl.style.opacity=o>40?Math.min(1,(o-40)/60):0;if(sl)sl.style.opacity=o<-40?Math.min(1,(-o-40)/60):0}
+function onSE(){if(!S.dragging)return;S.dragging=false;const o=S.dragCurX-S.dragStartX,c=document.getElementById('ac'),arts=getCur();if(c)c.classList.remove('dragging');if(!arts.length)return;if(o>100){if(c)c.classList.add('exit-right');setTimeout(()=>keepA(arts[0]),300)}else if(o<-100){if(c)c.classList.add('exit-left');setTimeout(()=>discA(arts[0]),300)}else if(c){c.style.transform='';c.style.opacity='';const kl=c.querySelector('.swipe-label.keep'),sl=c.querySelector('.swipe-label.skip');if(kl)kl.style.opacity=0;if(sl)sl.style.opacity=0}}
+function btnK(){const a=getCur();if(!a.length)return;const c=document.getElementById('ac');if(c)c.classList.add('exit-right');setTimeout(()=>keepA(a[0]),300)}
+function btnD(){const a=getCur();if(!a.length)return;const c=document.getElementById('ac');if(c)c.classList.add('exit-left');setTimeout(()=>discA(a[0]),300)}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function render(){
+const cat=S.feeds[S.cat],arts=getCur(),totalK=Object.values(S.kept).reduce((s,a)=>s+a.length,0);let h='';
+h+=`<div class="header"><div><h1>THE FEED</h1><div class="sub">Curated RSS Reader</div></div><div class="hdr-actions"><button class="btn-h ${S.view==='reading'?'active':''}" onclick="switchView()">${S.view==='triage'?'📚 Reading List':'🃏 Triage'}${totalK>0&&S.view==='triage'?`<span class="badge">${totalK}</span>`:''}</button></div></div>`;
+h+='<div class="tabs">';for(const[k,c]of Object.entries(S.feeds)){const a=k===S.cat,kc=S.kept[k].length;h+=`<button class="tab ${a?'active':''}" style="${a?`color:${c.color};border-bottom-color:${c.color};font-weight:700`:''}" onclick="switchCat('${k}')"><span>${c.icon}</span><span>${c.label}</span>${kc?`<span class="tab-badge" style="background:${c.accent}">${kc}</span>`:''}</button>`}h+='</div>';
+h+='<div class="main">';
+if(S._cachedAt[S.cat]&&!S.loading){const ago=Math.floor((Date.now()-S._cachedAt[S.cat])/6e4);h+=`<div class="cache-note">Cached ${ago<1?'just now':ago+'m ago'} · Hit Refresh to update</div>`}
+h+=`<div class="toolbar"><span class="toolbar-info">${S.articles[S.cat].length?`${arts.length} remaining of ${S.articles[S.cat].length}`:'Not loaded'}</span><div class="toolbar-actions"><button class="btn-t ${S.editing?'active':''}" onclick="toggleEdit()">${S.editing?'Done':'⚙ Feeds'}</button><button class="btn-t" onclick="refreshCat()">↻ Refresh</button></div></div>`;
+if(S.error)h+=`<div class="error-box">${S.error}</div>`;
+if(S.editing){const st=S.feedStatus[S.cat]||{};h+=`<div class="feed-editor"><h3 style="color:${cat.color}">${cat.label} Sources (${cat.feeds.length})</h3>`;for(const f of cat.feeds){const s=st[f.name];h+=`<div class="feed-row"><div style="min-width:0;flex:1"><span class="feed-row-name">${esc(f.name)}</span>${s?`<span class="feed-status ${s.ok?'ok':'err'}">${s.ok?'✓ '+s.count:'✗ '+s.error}</span>`:''}<div class="feed-row-url">${esc(f.url)}</div></div><button class="btn-icon remove" onclick="rmFeed('${f.name.replace(/'/g,"\\'")}')">×</button></div>`}h+=`<div class="add-form"><input placeholder="Feed name" value="${esc(S.newName)}" oninput="S.newName=this.value"><input placeholder="RSS URL" value="${esc(S.newUrl)}" oninput="S.newUrl=this.value" style="flex:2 1 180px"><button class="btn-add" onclick="addFeed()">+ Add</button></div></div>`}
+if(S.loading)h+=`<div class="loading"><div class="spinner" style="border-top-color:${cat.color}"></div><span>Loading feeds...</span><span class="load-detail">${S.loadDetail}</span></div>`;
+if(S.view==='triage'&&!S.loading&&!S.editing){if(arts.length){h+='<div class="card-stack">';for(let i=Math.min(2,arts.length-1);i>=1;i--)h+=`<div class="card-bg" style="top:${i*6}px;transform:scale(${1-i*.03});opacity:${.6-(i-1)*.2};z-index:${8-i}"><div class="card-bg-inner"><div class="skel" style="width:40%"></div><div class="skel" style="width:90%;height:18px;margin-top:6px"></div><div class="skel" style="width:65%;height:18px"></div></div></div>`;const a=arts[0];h+=`<div class="swipe-card" id="ac" onmousedown="onSS(event)" onmousemove="onSM(event)" onmouseup="onSE()" onmouseleave="if(S.dragging)onSE()" ontouchstart="onSS(event)" ontouchmove="onSM(event)" ontouchend="onSE()"><div class="card-inner"><div class="swipe-label keep" style="opacity:0">KEEP</div><div class="swipe-label skip" style="opacity:0">SKIP</div><div class="card-meta"><span class="card-source">${esc(a.source)}</span><span class="card-date">${fmtDate(a.date)}</span></div><div class="card-title">${esc(a.title)}</div>${a.description?`<div class="card-desc">${esc(a.description.substring(0,200))}${a.description.length>200?'…':''}</div>`:''}<div class="card-footer"><div class="card-link"><a href="${a.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(a.site)} →</a></div><button class="btn-icon ${V.speaking&&V.id===a.id?'speaking':''}" onclick="event.stopPropagation();togV(getCur()[0])" title="Read aloud">${V.speaking&&V.id===a.id?'⏹':'🔊'}</button></div></div></div></div>`;h+=`<div class="card-actions"><button class="btn-a skip" onclick="btnD()" title="Skip">✕</button><button class="btn-a keep" onclick="btnK()" title="Keep">♥</button></div><div class="swipe-hint">← Swipe left to skip · Swipe right to keep →</div>`}else if(S.articles[S.cat].length)h+='<div class="empty"><div class="icon">📭</div><h3>All caught up!</h3><p>No more articles to triage. Check your reading list or refresh.</p></div>';else if(!S.loading)h+='<div class="empty"><div class="icon">📡</div><h3>No articles yet</h3><p>Hit Refresh to load feeds.</p></div>'}
+if(S.view==='reading'){const kl=S.kept[S.cat];h+=`<div class="reading-title">${cat.icon} ${cat.label} — Reading List (${kl.length})</div>`;if(kl.length){h+='<div class="reading-list">';for(const item of kl){const iid=item.id.replace(/'/g,"\\'");h+=`<div class="reading-item"><div class="ri-content"><div class="ri-meta"><span>${esc(item.source)}</span><span class="dot">•</span><span style="font-weight:400;letter-spacing:.5px">${fmtDate(item.date)}</span></div><a href="${item.link}" target="_blank" rel="noopener">${esc(item.title)}</a></div><div class="ri-actions"><button class="btn-icon ${V.speaking&&V.id===item.id?'speaking':''}" onclick="togV(S.kept[S.cat].find(k=>k.id==='${iid}'))" title="Read aloud">${V.speaking&&V.id===item.id?'⏹':'🔊'}</button><button class="btn-icon remove" onclick="rmKept('${iid}')" title="Remove">×</button></div></div>`}h+='</div>'}else h+='<div class="empty"><div class="icon">📚</div><h3>Nothing saved yet</h3><p>Swipe right on articles to add them here.</p></div>'}
+h+='</div>';
+if(V.speaking)h+=`<div class="voice-bar show"><button onclick="stopV();render()">⏹</button><span class="vb-title">🔊 ${esc(V.title)}</span><button onclick="stopV();render()">✕</button></div>`;
+document.getElementById('app').innerHTML=h}
+
+load();render();fetchCat(S.cat);
+</script>
+</body>
+</html>
